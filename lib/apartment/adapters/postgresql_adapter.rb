@@ -63,7 +63,12 @@ module Apartment
       #
       def connect_to_new(tenant = nil)
         return reset if tenant.nil?
-        raise ActiveRecord::StatementInvalid.new("Could not find schema #{tenant}") unless Apartment.connection.schema_exists?(tenant.to_s)
+        
+        schema_exists = Rails.cache.fetch("apartment_se_#{tenant}", :expires_in => 300) do
+          Apartment.connection.schema_exists?(tenant.to_s)
+        end
+        
+        raise ActiveRecord::StatementInvalid.new("Could not find schema #{tenant}") unless schema_exists
 
         @current = tenant.to_s
         Apartment.connection.schema_search_path = full_search_path
